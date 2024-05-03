@@ -1,6 +1,6 @@
-# Langchain-rs demo
+# Langchain-rust demo
 
-Let's build a Rust teacher with langchain-rs !
+Let's build a Rust teacher with [langchain-rust](https://github.com/Abraxas-365/langchain-rust) !
 
 ![feris logo](./src/public/assets/img/ferris_teacher.png)
 

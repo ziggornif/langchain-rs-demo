@@ -1655,20 +1655,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "langchain-rs-demo"
-version = "0.1.0"
-dependencies = [
- "actix-cors",
- "actix-files",
- "actix-web",
- "futures",
- "langchain-rust",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
 name = "langchain-rust"
 version = "4.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1703,6 +1689,20 @@ dependencies = [
  "tokio-stream",
  "url",
  "urlencoding",
+]
+
+[[package]]
+name = "langchain-rust-demo"
+version = "0.1.0"
+dependencies = [
+ "actix-cors",
+ "actix-files",
+ "actix-web",
+ "futures",
+ "langchain-rust",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]
