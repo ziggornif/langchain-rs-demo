@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset='utf-8'>
+  <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+  <title>Rust assistant 🦀</title>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"/>
+  <script type="module" src='assets/app.js'></script>
+</head>
+<body>
+  <header class="container">
+    <hgroup>
+      <h1>Rust assistant 🦀</h1>
+    </hgroup>
+  </header>
+  <main class="container">
+    <section id="content">
+      <div class="hello" align="center">
+        <img src="assets/img/ferris_teacher.png" alt="Application logo">
+        <p>How can I help you today ?</p>
+      </div>
+
+      <div id="messages">
+
+      </div>
+    </section>
+    <section id="query">
+      <form id="prompt-form">
+        <fieldset role="group">
+          <input type="text" id="prompt" name="prompt" placeholder="Your question" aria-label="LLM prompt content" />
+          <input
+            type="submit"
+            value="Send"
+          />
+        </fieldset>
+      </form>
+    </section>
+  </main>
+</body>
+</html>
