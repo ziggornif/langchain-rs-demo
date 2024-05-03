@@ -23,3 +23,6 @@ cargo run
 
 The application should run at http://localhost:8080.
 
+## Demo
+
+https://youtu.be/eiMGgYyhLxs
