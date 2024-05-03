@@ -1,4 +1,5 @@
 use actix_web::{
+    http::header::ContentType,
     post,
     web::{self, Data},
     App, HttpResponse, HttpServer, Responder,
@@ -16,8 +17,7 @@ use langchain_rust::{
     template_fstring,
 };
 use serde::Deserialize;
-use std::fmt::Error;
-use std::{env, sync::Arc};
+use std::{env, fmt::Error, sync::Arc};
 
 pub struct State {
     pub chain: Arc<ConversationalChain>,
@@ -30,8 +30,6 @@ struct PromptRequest {
 
 #[post("/prompt")]
 async fn send_prompt(data: web::Data<State>, request: web::Json<PromptRequest>) -> impl Responder {
-    // let data = format!("Hello world ! Asked question: {}", request.question);
-
     let input_variables = prompt_args! {
         "input" => request.question,
     };
@@ -39,9 +37,7 @@ async fn send_prompt(data: web::Data<State>, request: web::Json<PromptRequest>) 
     let stream_result = data.chain.stream(input_variables).await;
     match stream_result {
         Ok(stream) => {
-            // Box and pin the stream
             let stream = Box::pin(stream);
-            // Transform stream items to actix_web::web::Bytes
             let transformed_stream = stream.map(|result| match result {
                 Ok(data) => Ok(actix_web::web::Bytes::from(data.content)),
                 Err(e) => Err(actix_web::error::ErrorInternalServerError(format!(
@@ -50,9 +46,8 @@ async fn send_prompt(data: web::Data<State>, request: web::Json<PromptRequest>) 
                 ))),
             });
 
-            // Create the response
             HttpResponse::Ok()
-                .content_type("text/event-stream")
+                .content_type(ContentType::plaintext())
                 .streaming(transformed_stream)
         }
         Err(e) => {
@@ -74,7 +69,6 @@ pub fn bootstrap(ollama_base_url: &str, model: &str) -> Result<Data<State>, Erro
 
     let prompt = message_formatter![
         fmt_message!(Message::new_system_message(
-            // "You are a technical writer, specialist with the rustlang programming languages, you will write an answer to the question for the noobs, with some source code examples."
             "You are a technical writer, specialist in rustlang programming language, you will write answer to the question for the beginners with some source code examples."
         )),
         fmt_template!(HumanMessagePromptTemplate::new(template_fstring!(
@@ -121,35 +115,6 @@ async fn main() -> std::io::Result<()> {
     .run();
 
     println!("Application running on http://localhost:{}", port);
-
-    // let input_variables = prompt_args! {
-    //     "input" => "What is a Rust struct ?",
-    // };
-
-    // let mut stream = chain.stream(input_variables).await.unwrap();
-    // while let Some(result) = stream.next().await {
-    //     match result {
-    //         Ok(data) => {
-    //             //If you junt want to print to stdout, you can use data.to_stdout().unwrap();
-    //             print!("{}", data.content);
-    //             stdout().flush().unwrap();
-    //         }
-    //         Err(e) => {
-    //             println!("Error: {:?}", e);
-    //         }
-    //     }
-    // }
-
-    // let input_variables = prompt_args! {
-    //     "input" => "Add address to the person struct",
-    // };
-    // match chain.invoke(input_variables).await {
-    //     Ok(result) => {
-    //         println!("\n");
-    //         println!("Result: {:?}", result);
-    //     }
-    //     Err(e) => panic!("Error invoking LLMChain: {:?}", e),
-    // }
 
     server.await
 }
