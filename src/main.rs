@@ -1,9 +1,9 @@
 use actix_web::{
-    http::header::ContentType,
     post,
     web::{self, Data},
     App, HttpResponse, HttpServer, Responder,
 };
+use futures::stream::StreamExt;
 use langchain_rust::{
     chain::{builder::ConversationalChainBuilder, Chain, ConversationalChain},
     fmt_message, fmt_template,
@@ -36,11 +36,28 @@ async fn send_prompt(data: web::Data<State>, request: web::Json<PromptRequest>) 
         "input" => request.question,
     };
 
-    match data.chain.invoke(input_variables).await {
-        Ok(result) => HttpResponse::Ok()
-            .content_type(ContentType::plaintext())
-            .body(result),
-        Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
+    let stream_result = data.chain.stream(input_variables).await;
+    match stream_result {
+        Ok(stream) => {
+            // Box and pin the stream
+            let stream = Box::pin(stream);
+            // Transform stream items to actix_web::web::Bytes
+            let transformed_stream = stream.map(|result| match result {
+                Ok(data) => Ok(actix_web::web::Bytes::from(data.content)),
+                Err(e) => Err(actix_web::error::ErrorInternalServerError(format!(
+                    "Stream error: {:?}",
+                    e
+                ))),
+            });
+
+            // Create the response
+            HttpResponse::Ok()
+                .content_type("text/event-stream")
+                .streaming(transformed_stream)
+        }
+        Err(e) => {
+            HttpResponse::InternalServerError().body(format!("Error creating stream: {:?}", e))
+        }
     }
 }
 
@@ -57,9 +74,9 @@ pub fn bootstrap(ollama_base_url: &str, model: &str) -> Result<Data<State>, Erro
 
     let prompt = message_formatter![
         fmt_message!(Message::new_system_message(
-            "You are a technical writer, specialist with the rustlang programming languages, you will write an answer to the question for the noobs, with some source code examples."
+            // "You are a technical writer, specialist with the rustlang programming languages, you will write an answer to the question for the noobs, with some source code examples."
+            "You are a technical writer, specialist in rustlang programming language, you will write answer to the question for the beginners with some source code examples."
         )),
-        // fmt_placeholder!("history"),
         fmt_template!(HumanMessagePromptTemplate::new(template_fstring!(
             "{input}", "input"
         ))),

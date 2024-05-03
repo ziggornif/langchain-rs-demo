@@ -1,7 +1,6 @@
 import markdownIt from 'https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/+esm';
 
 async function postPrompt(promptMessage) {
-  console.log(promptMessage)
   const resp = await fetch("/prompt", {
     method: "POST",
     headers: {
@@ -11,8 +10,12 @@ async function postPrompt(promptMessage) {
       question: promptMessage,
     })
   })
-  const responseText = await resp.text();
-  return markdownIt().render(responseText)
+
+  if (!resp.ok) {
+    throw new Error('Network response was not ok');
+  }
+
+  return resp.body.getReader();
 }
 
 function addLoader(element) {
@@ -38,15 +41,39 @@ window.onload = async function () {
     const messagesDiv = document.getElementById("messages");
     const authorPrompt = document.createElement('p');
     const robotPrompt = document.createElement('p');
-    authorPrompt.textContent = `You: ${promptMessage}`;
+
+    const userAvatar = document.createElement('img');
+    userAvatar.src = 'assets/img/you_avatar.png';
+    userAvatar.alt = 'user avatar';
+    authorPrompt.appendChild(userAvatar)
+    const userPrompt = document.createTextNode(` ${promptMessage}`);
+    authorPrompt.appendChild(userPrompt);
     messagesDiv.appendChild(authorPrompt);
     addLoader(messagesDiv);
     promptElem.value = null;
     promptElem.disabled = true;
-    const resp = await postPrompt(promptMessage);
+    const reader = await postPrompt(promptMessage);
     removeLoader(messagesDiv);
-    robotPrompt.innerHTML = `🤖: ${resp}`;
+    robotPrompt.innerHTML = "";
     messagesDiv.appendChild(robotPrompt);
+    const decoder = new TextDecoder('utf-8');  
+    // Read chunks of data from the stream
+    let text = "![avatar](assets/img/avatar.png) ";
+    const readStream = () => {
+      reader.read().then(({ done, value }) => {
+        if (done) {
+            return;
+        }
+        const chunkString = decoder.decode(value);
+        text += chunkString;
+        robotPrompt.innerHTML = markdownIt().render(text);
+        promptElem.scrollIntoView();
+        readStream();
+      }).catch(error => {
+          console.error('Error reading stream:', error);
+      });
+    };
+    readStream();
     promptElem.disabled = false;
     messagesDiv.appendChild(document.createElement("hr"));
   })

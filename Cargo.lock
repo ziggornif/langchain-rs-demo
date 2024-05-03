@@ -1661,6 +1661,7 @@ dependencies = [
  "actix-cors",
  "actix-files",
  "actix-web",
+ "futures",
  "langchain-rust",
  "serde",
  "serde_json",
