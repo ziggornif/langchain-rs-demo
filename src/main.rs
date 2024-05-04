@@ -1,4 +1,6 @@
-use actix_web::{http::header::ContentType, post, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{
+    http::header::ContentType, middleware, post, web, App, HttpResponse, HttpServer, Responder,
+};
 use futures::stream::StreamExt;
 use langchain_rust::chain::Chain;
 use langchain_rust::prompt_args;
@@ -53,6 +55,7 @@ async fn main() -> std::io::Result<()> {
 
     let server = HttpServer::new(move || {
         App::new()
+            .wrap(middleware::Compress::default())
             .service(send_prompt)
             .app_data(load_state(&ollama_base_url, &model).unwrap())
             .service(
