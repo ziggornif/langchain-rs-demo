@@ -1,27 +1,10 @@
-use actix_web::{
-    http::header::ContentType,
-    post,
-    web::{self, Data},
-    App, HttpResponse, HttpServer, Responder,
-};
+use actix_web::{http::header::ContentType, post, web, App, HttpResponse, HttpServer, Responder};
 use futures::stream::StreamExt;
-use langchain_rust::{
-    chain::{builder::ConversationalChainBuilder, Chain, ConversationalChain},
-    fmt_message, fmt_template,
-    llm::{openai::OpenAI, OpenAIConfig},
-    memory::SimpleMemory,
-    message_formatter,
-    prompt::HumanMessagePromptTemplate,
-    prompt_args,
-    schemas::Message,
-    template_fstring,
-};
+use langchain_rust::chain::Chain;
+use langchain_rust::prompt_args;
+use langchain_rust_demo::state::{load_state, State};
 use serde::Deserialize;
-use std::{env, fmt::Error, sync::Arc};
-
-pub struct State {
-    pub chain: Arc<ConversationalChain>,
-}
+use std::env;
 
 #[derive(Deserialize, Debug, Clone)]
 struct PromptRequest {
@@ -56,38 +39,6 @@ async fn send_prompt(data: web::Data<State>, request: web::Json<PromptRequest>) 
     }
 }
 
-pub fn bootstrap(ollama_base_url: &str, model: &str) -> Result<Data<State>, Error> {
-    let llm = OpenAI::default()
-        .with_config(
-            OpenAIConfig::default()
-                .with_api_base(format!("{}/v1", ollama_base_url))
-                .with_api_key("ollama"),
-        )
-        .with_model(model);
-
-    let memory = SimpleMemory::new();
-
-    let prompt = message_formatter![
-        fmt_message!(Message::new_system_message(
-            "You are a technical writer, specialist in rustlang programming language, you will write answer to the question for the beginners with some source code examples."
-        )),
-        fmt_template!(HumanMessagePromptTemplate::new(template_fstring!(
-            "{input}", "input"
-        ))),
-    ];
-
-    let chain = ConversationalChainBuilder::new()
-        .llm(llm)
-        .prompt(prompt)
-        .memory(memory.into())
-        .build()
-        .expect("Error building ConversationalChain");
-
-    Ok(Data::new(State {
-        chain: Arc::new(chain),
-    }))
-}
-
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let ollama_base_url =
@@ -103,7 +54,7 @@ async fn main() -> std::io::Result<()> {
     let server = HttpServer::new(move || {
         App::new()
             .service(send_prompt)
-            .app_data(bootstrap(&ollama_base_url, &model).unwrap())
+            .app_data(load_state(&ollama_base_url, &model).unwrap())
             .service(
                 actix_files::Files::new("/", "src/public")
                     .show_files_listing()
